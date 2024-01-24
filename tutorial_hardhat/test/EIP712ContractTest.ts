@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-misused-promises */
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { expect } from 'chai';
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { expect } from "chai";
 // import chai from 'chai';
 // import { solidity } from 'ethereum-waffle';
-import { Contract } from 'ethers';
-import { keccak256 } from 'ethers/lib/utils';
-import { ethers } from 'hardhat';
-import { message } from './struct';
+import { Contract } from "ethers";
+import { keccak256 } from "ethers/lib/utils";
+import { ethers } from "hardhat";
+import { message } from "./struct";
 
-describe('Start Example EIP712 test', async () => {
+describe("Start Example EIP712 test", async () => {
   // contracts
   let exampleEIP712: Contract;
   //signers
@@ -18,53 +18,49 @@ describe('Start Example EIP712 test', async () => {
   let address2: SignerWithAddress;
   let hashTypedDataV4Res: string;
   let structHash: string;
-  let InfoTest: message;
+  let structuredMessage: message;
 
-  it('Set data for MyEIP712 Governor test', async () => {
+  it("Set data for MyEIP712 Governor test", async () => {
     [owner, address1, address2] = await ethers.getSigners(); // get a test address
-     InfoTest = {
+    structuredMessage = {
       from: owner.address,
       to: address1.address,
-      data: "some data here"
-    }
-    console.log(`owner address is ${owner.address}`)
-    console.log(`address1 address is ${address1.address}`)
-    console.log(`address2 address is ${address2.address}`)
-
+      data: "some data here",
+    };
+    console.log(`owner address is ${owner.address}`);
+    console.log(`address1 address is ${address1.address}`);
+    console.log(`address2 address is ${address2.address}`);
   });
 
-  describe('Test Example MyEIP712 Governor deployment', () => {
-    it('Should get correct name, symbol, decimal for the Example ERC721 Contract', async () => {
-
+  describe("Test Example MyEIP712 Governor deployment", () => {
+    it("Should get correct name, symbol, decimal for the Example ERC721 Contract", async () => {
       const EIP712 = await ethers.getContractFactory("MyEIP712");
       exampleEIP712 = await EIP712.deploy();
       await exampleEIP712.deployed();
-      console.log(`${exampleEIP712.address} is MyEIP712 contract address`)
+      console.log(`${exampleEIP712.address} is MyEIP712 contract address`);
     });
 
-    it('step 01) set a struct with contract', async () => {
+    it("step 01) set a struct with contract", async () => {
       const _MESSAGE_TYPEHASH = await exampleEIP712._MESSAGE_TYPEHASH();
-      console.log("_MESSAGE_TYPEHASH is : ", _MESSAGE_TYPEHASH)
-      const hashStruct = await exampleEIP712.hashStruct(InfoTest);
-      console.log("hash sturct is : ", hashStruct)
-    })
+      console.log("_MESSAGE_TYPEHASH is : ", _MESSAGE_TYPEHASH);
+      const hashStruct = await exampleEIP712.hashStruct(structuredMessage);
+      console.log("hash sturct is : ", hashStruct);
+    });
 
-    it('step 02) check structHash', async () => {
-
-      structHash = await exampleEIP712.hashStruct(InfoTest);
-      console.log("hash sturct is : ", structHash)
+    it("step 02) check structHash", async () => {
+      structHash = await exampleEIP712.hashStruct(structuredMessage);
+      console.log("hash sturct is : ", structHash);
 
       hashTypedDataV4Res = await exampleEIP712.hashTypedDataV4(structHash);
-      console.log("hashTypedDataV4Res >>", hashTypedDataV4Res)
-      // const recover = await exampleEIP712.recoverSig(hashTypedDataV4Res, signature);
+      console.log("hashTypedDataV4Res >>", hashTypedDataV4Res);
+      // const recover = await exampleEIP712.recoveredSigner(hashTypedDataV4Res, signature);
       // console.log("recover >>", recover)
-    })
+    });
 
-    it('step 03) get signature', async () => {      
+    it("step 03) get signature", async () => {
+      const network = await ethers.provider.getNetwork();
+      const chainId = network.chainId;
 
-      const network = await ethers.provider.getNetwork(); 
-      const chainId = network.chainId
-      
       const msgParams = {
         domain: {
           // Give a user friendly name to the specific contract you are signing for.
@@ -72,13 +68,11 @@ describe('Start Example EIP712 test', async () => {
           // Just let's you know the latest version. Definitely make sure the field name is correct.
           version: "1", // 눈에 보이는 명시하는 버전
           // Defining the chain aka Rinkeby testnet or Ethereum Main Net
-          chainId: ethers.BigNumber.from(
-            chainId
-          ), 
+          chainId: ethers.BigNumber.from(chainId),
           // If name isn't enough add verifying contract to make sure you are establishing contracts with the proper entity
-          verifyingContract: exampleEIP712.address // 사인을 하는 컨트렉트의 주소, 0000거래소의 CA
+          verifyingContract: exampleEIP712.address, // 사인을 하는 컨트렉트의 주소, 0000거래소의 CA
         },
-  
+
         // Defining the message signing data content.
         message: {
           /*
@@ -89,7 +83,7 @@ describe('Start Example EIP712 test', async () => {
           */
           from: owner.address,
           to: address1.address,
-          data: "some data here"
+          data: "some data here",
         },
         // Refers to the keys of the *types* object below.
         primaryType: "Message",
@@ -102,28 +96,32 @@ describe('Start Example EIP712 test', async () => {
         },
       };
 
-      //메타마스크와 같은 지갑에서 서명
       let signature = await owner._signTypedData(
         msgParams.domain,
         msgParams.types,
         msgParams.message
       );
 
-      console.log("signature is : ", signature)
+      console.log("signature is : ", signature);
 
+      // ethers 를 이용한 검증
       const verifiedAddress = ethers.utils.verifyTypedData(
         msgParams.domain,
         msgParams.types,
         msgParams.message,
         signature
-        );
+      );
 
-      console.log("verifiedAddress from ethers is : ", verifiedAddress)
+      console.log("verifiedAddress from ethers is : ", verifiedAddress);
       expect(verifiedAddress).to.equal(owner.address);
 
-      const recoverSig = await exampleEIP712.validateSigner(structHash, signature)
-      console.log("verifiedAddress from contract is : ", recoverSig)
-      expect(recoverSig).to.equal(owner.address);
-    })
-  })
-})
+      // 컨트랙트 함수를 통해 검증
+      const recoveredSigner = await exampleEIP712.validateSigner(
+        structHash,
+        signature
+      );
+      console.log("verifiedAddress from contract is : ", recoveredSigner);
+      expect(recoveredSigner).to.equal(owner.address);
+    });
+  });
+});
